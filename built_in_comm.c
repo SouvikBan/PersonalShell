@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
 
 void command_cd(char ** args,char * HOME)
 {
@@ -44,5 +48,42 @@ void command_pwd(char ** args)
 
 int command_echo(char ** args)
 {
-    
+}
+
+
+void command_ls(char ** args)
+{
+    char path[2048];
+    struct dirent *descr;
+    getcwd(path, 2048);
+    DIR * dir_desc = opendir(path);
+    if( dir_desc == NULL){
+        perror("Cannot find directory");
+        exit(-1);
+    }
+    if(args[1]==NULL){
+        while(descr = readdir(dir_desc) )
+        {
+            if(strcmp(descr->d_name,".") != 0 && strcmp(descr->d_name,"..")!=0 )
+                printf("%s\n",descr->d_name);
+        }
+    }
+    else if(strcmp(args[1],"-l")==0){
+        while(descr = readdir(dir_desc))
+        {
+            int filedesc = open(descr->d_name,O_WRONLY); 
+            struct stat fileStat;
+            stat(filedesc,&fileStat);
+            
+
+        }
+    }
+    else if(strcmp(args[1],"-a")==0){
+          while(descr = readdir(dir_desc) )
+            printf("%s\n",descr->d_name);
+    }
+    else if(strcmp(args[1],"-la")==0 || strcmp(args[1],"-al")==0){
+       
+    }
+    closedir(dir_desc);
 }
