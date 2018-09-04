@@ -6,11 +6,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
+#include <grp.h>
+#include <pwd.h>
+#include <time.h>
 
 void command_cd(char ** args,char * HOME)
 {
-    int ret_val;
-    
+    int ret_val;    
     if(args[1] == NULL){
        ret_val = chdir(HOME);
     } 
@@ -19,7 +21,7 @@ void command_cd(char ** args,char * HOME)
         strcat(HOME,token);
         ret_val = chdir(HOME);
         if(ret_val < 0){
-            printf("No such directory exists.\n");
+           printf("No such directory exists.\n");
         }
     }
     else{
@@ -46,8 +48,30 @@ void command_pwd(char ** args)
 }
 
 
-int command_echo(char ** args)
+void command_echo(char ** args,int end_position)
 {
+    if(end_position<=1) {
+        printf("\n");
+  }
+  for (int i = 1; i < end_position; i++)
+  {
+  	if(args[i][0]=='$')
+  	{
+  		const char* s = getenv(args[i]+1);
+  		if(s!=NULL) printf("%s ",s);
+  	}
+  	else
+  	{
+	    int j;
+	    for(j=0;args[i][j]!='\0';j++)
+	    {
+	      if(args[i][j]!='"') printf("%c",args[i][j]);
+	    }
+
+        printf(" ");
+	}
+  }
+    printf("\n");
 }
 
 
@@ -61,29 +85,73 @@ void command_ls(char ** args)
         perror("Cannot find directory");
         exit(-1);
     }
-    if(args[1]==NULL){
-        while(descr = readdir(dir_desc) )
-        {
-            if(strcmp(descr->d_name,".") != 0 && strcmp(descr->d_name,"..")!=0 )
-                printf("%s\n",descr->d_name);
-        }
-    }
-    else if(strcmp(args[1],"-l")==0){
-        while(descr = readdir(dir_desc))
-        {
-            int filedesc = open(descr->d_name,O_WRONLY); 
+    if(strcmp(args[1],"-l")==0){
+        while(descr = readdir(dir_desc)){
+            if(strcmp(descr->d_name,".") != 0 && strcmp(descr->d_name,"..")!=0 ){
             struct stat fileStat;
-            stat(filedesc,&fileStat);
-            
-
+            struct group * grp;
+            struct passwd * pwd;
+            stat(descr->d_name,&fileStat);
+            struct tm * time_stamp = gmtime(&(fileStat.st_mtime));
+            grp = getgrgid(fileStat.st_gid);
+            pwd = getpwuid(fileStat.st_uid);
+            printf( (S_ISDIR(fileStat.st_mode)) ? "d" : "-");
+            printf( (fileStat.st_mode & S_IRUSR) ? "r" : "-");
+            printf( (fileStat.st_mode & S_IWUSR) ? "w" : "-");
+            printf( (fileStat.st_mode & S_IXUSR) ? "x" : "-");
+            printf( (fileStat.st_mode & S_IRGRP) ? "r" : "-");
+            printf( (fileStat.st_mode & S_IWGRP) ? "w" : "-");
+            printf( (fileStat.st_mode & S_IXGRP) ? "x" : "-");
+            printf( (fileStat.st_mode & S_IROTH) ? "r" : "-");
+            printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
+            printf( (fileStat.st_mode & S_IXOTH) ? "x" : "-");
+            printf("\t%lu",fileStat.st_nlink);
+            printf("\t%s",pwd->pw_name);
+            printf("\t%s",grp->gr_name);
+            printf("\t%lu",fileStat.st_size);
+            printf("\t%s",descr->d_name);
+            printf("\n");
+            }
         }
+
     }
     else if(strcmp(args[1],"-a")==0){
           while(descr = readdir(dir_desc) )
             printf("%s\n",descr->d_name);
     }
     else if(strcmp(args[1],"-la")==0 || strcmp(args[1],"-al")==0){
-       
+            while(descr = readdir(dir_desc)){
+            struct stat fileStat;
+            struct group * grp;
+            struct passwd * pwd;
+            stat(descr->d_name,&fileStat);
+            struct tm * time_stamp = gmtime(&(fileStat.st_mtime));
+            grp = getgrgid(fileStat.st_gid);
+            pwd = getpwuid(fileStat.st_uid);
+            printf( (S_ISDIR(fileStat.st_mode)) ? "d" : "-");
+            printf( (fileStat.st_mode & S_IRUSR) ? "r" : "-");
+            printf( (fileStat.st_mode & S_IWUSR) ? "w" : "-");
+            printf( (fileStat.st_mode & S_IXUSR) ? "x" : "-");
+            printf( (fileStat.st_mode & S_IRGRP) ? "r" : "-");
+            printf( (fileStat.st_mode & S_IWGRP) ? "w" : "-");
+            printf( (fileStat.st_mode & S_IXGRP) ? "x" : "-");
+            printf( (fileStat.st_mode & S_IROTH) ? "r" : "-");
+            printf( (fileStat.st_mode & S_IWOTH) ? "w" : "-");
+            printf( (fileStat.st_mode & S_IXOTH) ? "x" : "-");
+            printf("\t%lu",fileStat.st_nlink);
+            printf("\t%s",pwd->pw_name);
+            printf("\t%s",grp->gr_name);
+            printf("\t%lu",fileStat.st_size);
+            printf("\t%s",descr->d_name);
+            printf("\n");
+        }
+    }
+    else{
+        while(descr = readdir(dir_desc) )
+        {
+            if(strcmp(descr->d_name,".") != 0 && strcmp(descr->d_name,"..")!=0 )
+                printf("%s\n",descr->d_name);
+        }
     }
     closedir(dir_desc);
 }

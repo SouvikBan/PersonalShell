@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include "built_in_comm.h"
+#include "system_comm.h"
 #include <sys/utsname.h>
 
 
@@ -35,9 +35,23 @@ char *read_line()
 }
 
 
+void command_execute(char ** args,char * HOME,int end_position)
+{
+    if(strcmp(args[0],"exit")==0){
+        free(args);
+        exit(0);
+    }
+    else{
+        if(strcmp(args[end_position-1],"&")==0)
+            execute(args,HOME,1,end_position);
+        else
+            execute(args,HOME,0,end_position);
+    }
+}
+
 #define TOKEN_BUFFSIZE 64
 #define TOKEN_DELIMITER " \t\r\n\a"
-char ** parse_line(char * line){
+void parse_line(char * line,char * HOME){
 
     int buffersize = TOKEN_BUFFSIZE , position = 0;
 
@@ -57,33 +71,11 @@ char ** parse_line(char * line){
         token = strtok(NULL, TOKEN_DELIMITER); 
     }
     tokens[position] = NULL;
-    return tokens;
+    command_execute(tokens,HOME,position);
+    free(tokens);
 
 }
 
-
-
-void command_execute(char ** args,char * envp[],char * HOME)
-{
-    if( strcmp(args[0],"pwd")==0 ){
-        command_pwd(args);
-    }
-    else if(strcmp(args[0],"cd")==0){
-        command_cd(args,HOME);
-    }
-    else if(strcmp(args[0],"echo")==0){
-        command_echo(args);
-    }
-    else if(strcmp(args[0],"ls")==0){
-        command_ls(args);
-    }
-    else if(strcmp(args[0],"exit")==0){
-        exit(0);
-    }
-    else{
-
-    }
-}
 
 int main(int argc,char * envp[]){
 
@@ -98,7 +90,7 @@ int main(int argc,char * envp[]){
     long long int i=0;
     while(1)
     {
-        getcwd(PATH,2048);
+        getcwd(PATH,sizeof(PATH));
         if(strstr(PATH,HOME)!=NULL){
             NEW_PATH[0]='~';
             long long int k=1;
@@ -116,10 +108,8 @@ int main(int argc,char * envp[]){
         }
         printf("<%s@%s:%s>",user,uname_pointer.nodename,NEW_PATH);
         line = read_line();
-        flags = parse_line(line);
-        command_execute(flags,envp,HOME);
+        parse_line(line,HOME);
         free(line);
-        free(flags);
     }
     return 0;
 }
